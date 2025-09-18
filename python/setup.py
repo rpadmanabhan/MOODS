@@ -6,8 +6,12 @@ setup.py file for MOODS
 
 from setuptools import setup, Extension
 from os import path
+from pathlib import Path
 
-common_includes = ["core/"]
+HERE = Path(__file__).resolve().parent
+CORE = HERE.parent / "core"
+
+common_includes = [str(CORE)]
 common_compile_args = ['-march=native', '-O3', '-fPIC', '--std=c++11']
 
 tools_mod = Extension('MOODS._tools',
