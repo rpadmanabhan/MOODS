@@ -1,3 +1,7 @@
+"""
+setup.py file for MOODS
+"""
+
 from setuptools import setup, Extension
 from pathlib import Path
 import subprocess
@@ -6,8 +10,8 @@ import sys
 
 here = Path(__file__).parent.resolve()
 
-# Locate core/ whether this python/ folder lives within the repo or standalone.
-core_dir = (here / "core")
+# Locate C++ code under core/ ; this folder should exist within the python/ folder or one level above it
+core_dir = here / "core"
 if not core_dir.exists():
     core_dir = (here.parent / "core")
 if not core_dir.exists():
@@ -17,9 +21,9 @@ moods_pkg_dir = here / "MOODS"
 moods_pkg_dir.mkdir(exist_ok=True)
 
 def run_swig():
-    """Generate Python wrappers and C++ glue with SWIG before build_py."""
+    """Generate Python wrappers and C++ bindings with swig before setup.py scans directory."""
     if not shutil.which("swig"):
-        raise RuntimeError("SWIG not found on PATH; install swig and retry")
+        raise RuntimeError("swig not found in PATH; install swig and retry")
 
     # Generate wrappers for these interface files
     for mod in ["scan", "tools", "misc", "parsers"]:
@@ -27,7 +31,8 @@ def run_swig():
         py_out = moods_pkg_dir / f"{mod}.py"
         cxx_out = core_dir / f"{mod}_wrap.cxx"
 
-        # Re-generate if missing; you can force regen by deleting either output file.
+        # Regenerate if missing
+        # Note: You can force regen by deleting either output file.
         if not py_out.exists() or not cxx_out.exists():
             cmd = [
                 "swig",
@@ -43,7 +48,7 @@ def compile_args():
         # MSVC: keep minimal, portable flags.
         return ["/O2", "/EHsc"]
     else:
-        # GCC/Clang: safe, conventional flags.
+        # GCC/Clang
         return ["-O3", "-std=c++11", "-fPIC"]
 
 # Ensure wrappers exist before setuptools scans packages/files
@@ -93,8 +98,12 @@ parsers_mod = Extension(
     extra_compile_args=common_compile_args,
 )
 
-# Long description optional; keep simple to avoid file errors in VCS install.
-long_description = "MOODS: Motif Occurrence Detection Suite (Python bindings)"
+readme_file = here / "readme.MD"
+if readme_file.exists():
+    with open(here / 'readme.MD') as f:
+        long_description = f.read()
+else:
+    long_description = "MOODS: Motif Occurrence Detection Suite (Python bindings)"
 
 setup(
     name="MOODS-python",
@@ -106,10 +115,8 @@ setup(
     maintainer_email="janne.h.korhonen@gmail.com",
     url="https://www.cs.helsinki.fi/group/pssmfind/",
     license="GPLv3 / Biopython license",
+    ext_modules=[tools_mod, scan_mod, parsers_mod],    
     packages=["MOODS"],
-    # The generated scan.py/tools.py/misc.py/parsers.py live inside the MOODS package dir,
-    # which setuptools will include automatically.
-    ext_modules=[tools_mod, scan_mod, parsers_mod],
     scripts=['scripts/moods-dna.py'],
     classifiers=["Topic :: Scientific/Engineering :: Bio-Informatics"],
     keywords="PWM, PSSM, motif scan",
